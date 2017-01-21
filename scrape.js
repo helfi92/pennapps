@@ -1,7 +1,14 @@
+const _ = require('lodash')
 const textract = require('textract');
 const request = require('request');
 const google = require('./google');
 const excludedTerms = ['instructors'];
+const mongoose = require('mongoose');
+var Exam = require('./model/Exam');
+
+
+const mongoUri = process.env.MONGODB_URI || 'mongodb://pennapps:iamacoolpasswordforpennapps@138.197.64.250:27017/';
+mongoose.connect(mongoUri);
 
 const nlp = (text) => {
   const body = {
@@ -30,7 +37,7 @@ const nlp = (text) => {
 
   return new Promise((resolve, reject) => {
     const callback = (error, response, body) => {
-      if (!error && response.statusCode == 200) {
+      if (!error && response.statusCode==200) {
         var info = JSON.parse(body);
         return resolve(info);
         console.log(JSON.stringify(info, null, 2));
@@ -54,9 +61,9 @@ const extractText = (url) => {
 };
 
 const hasExcludedTerm = (text) => {
-  const lowerCaseText= text.toLowerCase();
+  const lowerCaseText = text.toLowerCase();
 
-  for(let i = 0; i < excludedTerms.length; i++) {
+  for (let i = 0; i < excludedTerms.length; i++) {
     const term = excludedTerms[i];
 
     if (lowerCaseText.includes(term)) {
@@ -77,18 +84,18 @@ const filter = (url) => {
 
       nlp(text).then(nlp => {
         nlp.response.topics.filter(elem => {
-          return elem.label.includes('Exam') && elem.score === 1;
+          return elem.label.includes('Exam') && elem.score===1;
         });
 
-        resolve(url);
+        resolve({url, text, tags: []});
       }).catch(resolve);
     });
-  })};
+  })
+};
 
-google('sat questions english sentence vocabulary exam test site:.edu filetype:pdf').then(urls => {
-    Promise.all(urls.map(filter)).then(cleanURLs => {
-      console.log('cleanUrls: ', cleanURLs);
-    }).catch(e => {
-      console.log('ERROR: ', e);
-    });
-  });
+
+google('sat questions english sentence vocabulary exam test site:.edu filetype:pdf')
+  .then(urls => Promise.all(urls.map(filter)))
+  .then(cleanURLs => Exam.insertMany(_.filter(cleanURLs, obj => obj !== null)))
+  .then(() => mongoose.connection.close())
+  .catch(err => console.error(err));

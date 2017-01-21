@@ -10,6 +10,8 @@
   "license": "ISC",
   "dependencies": {
     "google": "^2.1.0",
+    "mongodb": "^2.2.21",
+    "mongoose": "^4.7.7",
     "request": "^2.79.0",
     "textract": "^2.1.1"
   }
