@@ -94,7 +94,7 @@ const getQuestions = (text) => {
 
         choices = _.filter(choices, choice => choice.length < 50);
 
-        if (choices.length > 2 && choices.length < 5) {
+        if (choices.length > 2 && choices.length < 5 && question.length < 1000) {
           questions.push({
             question: question.replace(/\b[A-Z][.)].*/g, ''),
             choices
