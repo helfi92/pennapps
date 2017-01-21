@@ -38,9 +38,9 @@ const nlp = (text) => {
   return new Promise((resolve, reject) => {
     const callback = (error, response, body) => {
       if (!error && response.statusCode==200) {
-        var info = JSON.parse(body);
+        const info = JSON.parse(body);
+
         return resolve(info);
-        console.log(JSON.stringify(info, null, 2));
       } else {
         return reject(error);
       }
@@ -76,20 +76,39 @@ const hasExcludedTerm = (text) => {
 
 const getQuestions = (text) => {
   let questions = [];
+  let firstCount = text.match(/ [A-Z\d]\. /g);
+  let secondCount = text.match(/ \([A-Z\d]\) /g);
+  firstCount = firstCount && firstCount.length || 0;
+  secondCount = secondCount && secondCount.length || 0;
 
-  let exam = text.match(/\b(\d{1,2})\.\s\D*(?:(?!\b\d{1,3}\.\s)\d+\D*)*/g);
-  exam = _.filter(exam, exam => !/[@]*(SAMPLE)/g.test(exam) && exam.length > 150);
+  if (firstCount > secondCount) {
+    let exam = text.match(/\b(\d{1,2})\.\s\D*(?:(?!\b\d{1,3}\.\s)\d+\D*)*/g);
+    exam = _.filter(exam, exam => !/[@]*(SAMPLE)/g.test(exam) && exam.length > 150)
 
-  _.each(exam, exam => {
-    let question = exam.replace(/\d+[(.]\s*/g, '');
+    _.each(exam, exam => {
+      let question = exam.replace(/\d+[(.]\s*/g, '');
 
-    let choices = [];
-    if (question.match(/\b[A-Z][.)].*/g)) choices = _.map(_.filter(question.match(/\b[A-Z][.)].*/g)[0].split(/[A-Z\d][.)] /g), text => text !== ""), text => text.trim());
-    choices = _.filter(choices, choice => choice.length < 50)
-    if (choices.length > 1 && choices.length < 5) questions.push({question: question.replace(/\b[A-Z][.)].*/g, ''), choices})
-  });
+      let choices = [];
+      if (question.match(/ [A-Ea-e\d][.)] .*/g)) {
+        choices = _.map(_.filter(question.match(/ [A-Ea-e\d][.)] .*/g)[0].split(/ [A-Ea-e\d][.)]/g), text => text!==""), text => text.trim());
 
-  console.log('questions: ', questions);
+        choices = _.filter(choices, choice => choice.length < 50);
+
+        if (choices.length > 2 && choices.length < 5) {
+          questions.push({
+            question: question.replace(/\b[A-Z][.)].*/g, ''),
+            choices
+          });
+        }
+      } else {
+        questions.push({
+          question: question.replace(/\b[A-Z][.)].*/g, ''),
+          choices: []
+        });
+      }
+    });
+  }
+
   return questions
 };
 
@@ -106,10 +125,13 @@ const filter = (url) => {
           return elem.label.includes('Exam') && elem.score===1;
         });
 
+
+
         const questions = getQuestions(text);
         if (questions.length) {
-          const E = new Exam({url, text, tags: [], questions});
-          E.save((err) => {})
+          const E = new Exam({url, text, tags: _.filter(nlp.response.topics, topic => topic.score === 1), questions});
+
+          E.save((err) => {});
           resolve(E);
         }
       }).catch(resolve);
@@ -118,10 +140,10 @@ const filter = (url) => {
 };
 
 const searchExams = (term) => {
-  google(term)
+  google(term + ' sample exam test questions site:.edu filetype:pdf')
     .then(urls => Promise.all(urls.map(filter)))
     .then(() => mongoose.connection.close())
     .catch(err => console.error(err));
 };
 
-searchExams('sat questions english sentence vocabulary exam test site:.edu filetype:pdf');
+_.each(['history', 'law', 'biology'], term => searchExams(term));
