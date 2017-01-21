@@ -1,6 +1,7 @@
 const textract = require('textract');
 const request = require('request');
 const google = require('./google');
+const excludedTerms = ['instructors'];
 
 const nlp = (text) => {
   const body = {
@@ -52,23 +53,42 @@ const extractText = (url) => {
   });
 };
 
+const hasExcludedTerm = (text) => {
+  const lowerCaseText= text.toLowerCase();
+
+  for(let i = 0; i < excludedTerms.length; i++) {
+    const term = excludedTerms[i];
+
+    if (lowerCaseText.includes(term)) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 const filter = (url) => {
   return new Promise((resolve, reject) => {
-    const textList = extractText(url).then(text => {
-      //console.log(text);
-      const nlpData = nlp(text).then(nlp => {
-        const nlpFiltered = nlp.response.topics.filter(elem => {
-          return elem.label.includes('English');
+    extractText(url).then(text => {
+
+      if (hasExcludedTerm(text)) {
+        resolve(null);
+      }
+
+      nlp(text).then(nlp => {
+        nlp.response.topics.filter(elem => {
+          return elem.label.includes('Exam') && elem.score === 1;
         });
 
-        return resolve(url);
-      });
+        resolve(url);
+      }).catch(resolve);
     });
-  });
-};
+  })};
 
 google('sat questions english sentence vocabulary exam test site:.edu filetype:pdf').then(urls => {
     Promise.all(urls.map(filter)).then(cleanURLs => {
       console.log('cleanUrls: ', cleanURLs);
+    }).catch(e => {
+      console.log('ERROR: ', e);
     });
   });
