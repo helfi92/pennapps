@@ -100,11 +100,6 @@ const getQuestions = (text) => {
             choices
           });
         }
-      } else {
-        questions.push({
-          question: question.replace(/\b[A-Z][.)].*/g, ''),
-          choices: []
-        });
       }
     });
   }
