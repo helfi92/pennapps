@@ -9,9 +9,7 @@
   "author": "Hassan Ali <helfi92@gmail.com>",
   "license": "ISC",
   "dependencies": {
-    "axios": "^0.15.3",
-    "node-fetch": "^1.6.3",
-    "pdf-text": "^0.4.0",
+    "google": "^2.1.0",
     "request": "^2.79.0",
     "textract": "^2.1.1"
   }

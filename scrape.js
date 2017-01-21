@@ -1,8 +1,6 @@
 const textract = require('textract');
-var fetch = require('node-fetch');
-var request = require('request');
-
-const url = 'http://people.math.sc.edu/sharpley/math142/Tests/Test1_sample.pdf';
+const request = require('request');
+const google = require('./google');
 
 const nlp = (text) => {
   const body = {
@@ -22,35 +20,55 @@ const nlp = (text) => {
     "Content-Type": "application/x-www-form-urlencoded"
   };
 
-  console.log('preparing to fetch...');
-
-  var options = {
+  const options = {
     url: 'https://www.textrazor.com/demo/process/',
     headers: headers,
     method: 'POST',
     form: body
   };
 
-  const callback = (error, response, body) => {
-    if (!error && response.statusCode == 200) {
-      var info = JSON.parse(body);
-      console.log(JSON.stringify(info, null, 2));
-    }
-  };
+  return new Promise((resolve, reject) => {
+    const callback = (error, response, body) => {
+      if (!error && response.statusCode == 200) {
+        var info = JSON.parse(body);
+        return resolve(info);
+        console.log(JSON.stringify(info, null, 2));
+      } else {
+        return reject(error);
+      }
+    };
 
-  request('https://www.textrazor.com/demo/process/', options, callback);
+    request('https://www.textrazor.com/demo/process/', options, callback);
+  });
 };
 
 const extractText = (url) => {
   return new Promise((resolve, reject) => {
     textract.fromUrl(url, (error, text) => {
-      if (error) reject(error);
+      if (error) return reject(error);
 
-      resolve(text);
-      console.log(text);
-      return text
+      return resolve(text);
     });
   });
 };
 
-const nlpData = extractText(url).then(text => nlp(text));
+const filter = (url) => {
+  return new Promise((resolve, reject) => {
+    const textList = extractText(url).then(text => {
+      //console.log(text);
+      const nlpData = nlp(text).then(nlp => {
+        const nlpFiltered = nlp.response.topics.filter(elem => {
+          return elem.label.includes('English');
+        });
+
+        return resolve(url);
+      });
+    });
+  });
+};
+
+google('sat questions english sentence vocabulary exam test site:.edu filetype:pdf').then(urls => {
+    Promise.all(urls.map(filter)).then(cleanURLs => {
+      console.log('cleanUrls: ', cleanURLs);
+    });
+  });
