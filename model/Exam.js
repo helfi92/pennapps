@@ -5,6 +5,7 @@ var Schema = mongoose.Schema;
 // create a schema
 var examSchema = new Schema({
   text: { type: String },
+  category: {type: String},
   url : { type: String },
   tags: { type: Array },
   questions: { type: Array },

@@ -96,7 +96,7 @@ const getQuestions = (text) => {
 
         if (choices.length > 2 && choices.length < 5 && question.length < 1000) {
           questions.push({
-            question: question.replace(/\b[A-Z][.)].*/g, ''),
+            question: question.replace(/ [A-Ea-e\d][.)] .*/g, ''),
             choices
           });
         }
@@ -107,8 +107,9 @@ const getQuestions = (text) => {
   return questions
 };
 
-const filter = (url) => {
+const filter = (obj) => {
   return new Promise((resolve, reject) => {
+    let {url, category} = obj;
     extractText(url).then(text => {
 
       if (hasExcludedTerm(text)) {
@@ -124,7 +125,7 @@ const filter = (url) => {
 
         const questions = getQuestions(text);
         if (questions.length) {
-          const E = new Exam({url, text, tags: _.filter(nlp.response.topics, topic => topic.score === 1), questions});
+          const E = new Exam({url, category, text, tags: _.filter(nlp.response.topics, topic => topic.score === 1), questions});
 
           E.save((err) => {});
           resolve(E);
@@ -136,9 +137,15 @@ const filter = (url) => {
 
 const searchExams = (term) => {
   google(term + ' sample exam test questions site:.edu filetype:pdf')
-    .then(urls => Promise.all(urls.map(filter)))
+    .then(urls => {
+      urls = _.map(urls, url => {
+        return { url, category: term }
+      });
+
+      return Promise.all(urls.map(filter))
+    })
     .then(() => mongoose.connection.close())
     .catch(err => console.error(err));
 };
 
-_.each(['history', 'law', 'biology'], term => searchExams(term));
+_.each(['History', 'Law', 'Biology'], term => searchExams(term));
