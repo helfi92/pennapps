@@ -1,7 +1,7 @@
 const google = require('google');
 
 module.exports = (term) => {
-  google.resultsPerPage = 4;
+  google.resultsPerPage = 50;
   let nextCounter = 0;
   let results = [];
 

@@ -74,6 +74,25 @@ const hasExcludedTerm = (text) => {
   return false;
 };
 
+const getQuestions = (text) => {
+  let questions = [];
+
+  let exam = text.match(/\b(\d{1,2})\.\s\D*(?:(?!\b\d{1,3}\.\s)\d+\D*)*/g);
+  exam = _.filter(exam, exam => !/[@]*(SAMPLE)/g.test(exam) && exam.length > 150);
+
+  _.each(exam, exam => {
+    let question = exam.replace(/\d+[(.]\s*/g, '');
+
+    let choices = [];
+    if (question.match(/\b[A-Z][.)].*/g)) choices = _.map(_.filter(question.match(/\b[A-Z][.)].*/g)[0].split(/[A-Z\d][.)] /g), text => text !== ""), text => text.trim());
+    choices = _.filter(choices, choice => choice.length < 50)
+    if (choices.length > 1 && choices.length < 5) questions.push({question: question.replace(/\b[A-Z][.)].*/g, ''), choices})
+  });
+
+  console.log('questions: ', questions);
+  return questions
+};
+
 const filter = (url) => {
   return new Promise((resolve, reject) => {
     extractText(url).then(text => {
@@ -87,15 +106,22 @@ const filter = (url) => {
           return elem.label.includes('Exam') && elem.score===1;
         });
 
-        resolve({url, text, tags: []});
+        const questions = getQuestions(text);
+        if (questions.length) {
+          const E = new Exam({url, text, tags: [], questions});
+          E.save((err) => {})
+          resolve(E);
+        }
       }).catch(resolve);
     });
   })
 };
 
+const searchExams = (term) => {
+  google(term)
+    .then(urls => Promise.all(urls.map(filter)))
+    .then(() => mongoose.connection.close())
+    .catch(err => console.error(err));
+};
 
-google('sat questions english sentence vocabulary exam test site:.edu filetype:pdf')
-  .then(urls => Promise.all(urls.map(filter)))
-  .then(cleanURLs => Exam.insertMany(_.filter(cleanURLs, obj => obj !== null)))
-  .then(() => mongoose.connection.close())
-  .catch(err => console.error(err));
+searchExams('sat questions english sentence vocabulary exam test site:.edu filetype:pdf');

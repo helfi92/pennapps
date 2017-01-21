@@ -7,6 +7,7 @@ var examSchema = new Schema({
   text: { type: String },
   url : { type: String },
   tags: { type: Array },
+  questions: { type: Array },
   created_at: Date,
   updated_at: Date
 });
